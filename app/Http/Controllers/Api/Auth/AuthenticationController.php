@@ -1,26 +1,51 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
+use App\Notifications\VerifyEmail;
+use Carbon\Carbon;
 
 
 class AuthenticationController extends Controller
 {
+
+    private function sendVerificationCode(User $user, $resetResend = false)
+    {
+        if ($resetResend) {
+            $user->resend_attempts = 0;
+            $user->code_attempts = 0;
+        }
+
+        $code = rand(1000, 9999);
+        $user->last_resend_at = now();
+        $user->verification_code = $code;
+        $user->verification_code_expires_at = now()->addMinutes(10);
+
+        if (!$resetResend) {
+            $user->resend_attempts += 1;
+        }
+
+        $user->save();
+
+        $user->notify(new VerifyEmail($code));
+    }
+
     // Handle user registration
     public function register(Request $request)
     {
-        
+        DB::beginTransaction();   
         try {
             // Validate the request data
             $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
+                'email' => 'required|string|email|max:255',
                 'password' => 'required|string|min:6|confirmed',
             ], [
                 'name.required' => 'Please enter your full name.',
@@ -31,6 +56,31 @@ class AuthenticationController extends Controller
                 'password.confirmed' => 'The password confirmation does not match.',
             ]);
 
+            // Check if the user already exists
+            $user = User::where('email', $request->email)->first();
+
+            if ($user) {
+                if ($user->hasVerifiedEmail()) {
+                    return response()->json(['message' => 'This email is already registered and verified.'], 400);
+                }
+
+                if (($user->code_attempts >= 5 || $user->resend_attempts >= 5) && !Carbon::parse($user->last_resend_at)->addMinutes(10)->timezone('Asia/Phnom_Penh')->isPast()) {
+                    $seconds = Carbon::parse($user->last_resend_at)->addMinutes(10)->diffInSeconds(now());
+                    return response()->json([
+                        'message' => 'Too many attempts. Please wait before trying later.',
+                    ], 429);
+                }
+
+                // Update password and resend verification
+                $user->password = Hash::make($request->password);
+                $this->sendVerificationCode($user);
+
+                DB::commit();
+                return response()->json([
+                    'message' => 'You have already registered but not verified. Please check your email or request a new verification code.'
+                ], 409);
+            }
+
             // Create the user
             $user = User::create([
                 'name' => $request->name,
@@ -38,15 +88,22 @@ class AuthenticationController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            // Create a personal access token for the user
-            $token = $user->createToken('Personal Access Token')->accessToken;
+            $this->sendVerificationCode($user, true);
 
-            return response()->json(['token' => $token], 201);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Verification code sent to your email. Please check your email.'
+            ], 201);
         } catch (ValidationException $e) {
+            // Rollback if error occurs
+            DB::rollBack();
 
             // Handle validation errors
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
+            // Rollback if error occurs
+            DB::rollBack();
 
             // Handle other exceptions
             return response()->json([
@@ -75,8 +132,17 @@ class AuthenticationController extends Controller
                 return response()->json(['message' => 'Wrong email or password.'], 401);
             }
 
-            // If authentication is successful, create a personal access token
+            // Retrieve the currently authenticated user
             $user = Auth::user();
+
+            // Check if the user has verified their email
+            if (!$user->hasVerifiedEmail()) {
+                return response()->json([
+                    'message' => 'You need to verify your email address before logging in.'
+                ], 403);
+            }
+
+            // If verified, create a personal access token
             $token = $user->createToken('Personal Access Token')->accessToken;
 
             return response()->json(['token' => $token]);
