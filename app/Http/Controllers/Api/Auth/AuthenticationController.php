@@ -92,7 +92,7 @@ class AuthenticationController extends Controller
                     'message' => 'You have already registered but not verified. Please check your email or request a new verification code.',
                     'signed_verify_url' => $verifyUrl,
                     'signed_resend_url' => $resendUrl,
-                ], 409);
+                ], 200);
             }
 
             // Create the user
