@@ -134,6 +134,11 @@ class EmailVerificationController extends Controller
         $user->resend_attempts = 0;
         $user->save();
 
-        return response()->json(['message' => 'Email verified successfully.']);
+        $token = $user->createToken('Personal Access Token')->accessToken;
+
+        return response()->json([
+            'message' => 'Email verified successfully.',
+            'token' => $token,
+        ]);
     }
 }
