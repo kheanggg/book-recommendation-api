@@ -13,5 +13,5 @@ Route::get('/test', function () {
 Route::post('/register', [AuthenticationController::class, 'register']);
 Route::post('/login', [AuthenticationController::class, 'login']);
 
-Route::post('/email/resend', [EmailVerificationController::class, 'resend']);
-Route::post('/email/verify', [EmailVerificationController::class, 'verifyCode']);
+Route::post('/email/resend', [EmailVerificationController::class, 'resend'])->name('verification.resend')->middleware('signed');
+Route::post('/email/verify', [EmailVerificationController::class, 'verifyCode'])->name('verification.verify')->middleware('signed');

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Notifications\VerifyEmail;
@@ -15,6 +16,14 @@ use Carbon\Carbon;
 
 class AuthenticationController extends Controller
 {
+    private function generateSignedUrl(string $routeName, string $email, int $minutes = 10): string
+    {
+        return URL::temporarySignedRoute(
+            $routeName,
+            now()->timezone('Asia/Phnom_Penh')->addMinutes(10),
+            ['email' => $email]
+        );
+    }
 
     private function sendVerificationCode(User $user, $resetResend = false)
     {
@@ -71,13 +80,18 @@ class AuthenticationController extends Controller
                     ], 429);
                 }
 
+                $verifyUrl = $this->generateSignedUrl('verification.verify', $user->email);
+                $resendUrl = $this->generateSignedUrl('verification.resend', $user->email);
+
                 // Update password and resend verification
                 $user->password = Hash::make($request->password);
                 $this->sendVerificationCode($user);
 
                 DB::commit();
                 return response()->json([
-                    'message' => 'You have already registered but not verified. Please check your email or request a new verification code.'
+                    'message' => 'You have already registered but not verified. Please check your email or request a new verification code.',
+                    'signed_verify_url' => $verifyUrl,
+                    'signed_resend_url' => $resendUrl,
                 ], 409);
             }
 
@@ -88,12 +102,17 @@ class AuthenticationController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
+            $verifyUrl = $this->generateSignedUrl('verification.verify', $user->email);
+            $resendUrl = $this->generateSignedUrl('verification.resend', $user->email);
+
             $this->sendVerificationCode($user, true);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Verification code sent to your email. Please check your email.'
+                'message' => 'Verification code sent to your email. Please check your email.',
+                'signed_verify_url' => $verifyUrl,
+                'signed_resend_url' => $resendUrl,
             ], 201);
         } catch (ValidationException $e) {
             // Rollback if error occurs
