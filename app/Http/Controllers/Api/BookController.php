@@ -32,4 +32,18 @@ class BookController extends Controller
         return response()->json($books);
     }
 
+    // Handle Show Specific Book
+    public function show($id)
+    {
+        $book = Book::with('genres')->find($id);
+
+        if (!$book) {
+            return response()->json([
+                'message' => 'Book not found.'
+            ], 404);
+        }
+
+        return response()->json($book);
+    }
+
 }

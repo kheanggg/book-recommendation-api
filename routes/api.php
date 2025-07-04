@@ -21,3 +21,6 @@ Route::post('/email/verify', [EmailVerificationController::class, 'verifyCode'])
 
 // Book
 Route::get('/books', [BookController::class, 'index']);
+Route::get('/books/{id}', [BookController::class, 'show']);
+
+Route::get('/genres', fn() => \App\Models\Genre::all());

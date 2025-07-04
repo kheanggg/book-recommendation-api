@@ -46,7 +46,7 @@ class BookSeeder extends Seeder
 
         $bookCovers = [];
         for ($i = 1; $i <= 10; $i++) {
-            $bookCovers[] = "http://localhost:8000/book_covers/book_cover_{$i}.jpg"; // adjust filenames if different
+            $bookCovers[] = "book_covers/book_cover_{$i}.jpg"; // adjust filenames if different
         }
 
         // Create 100 books
