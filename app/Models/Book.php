@@ -11,7 +11,7 @@ class Book extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['title', 'author', 'description'];
+    protected $fillable = ['title', 'author', 'description', 'book_cover'];
 
     public function genres()
     {

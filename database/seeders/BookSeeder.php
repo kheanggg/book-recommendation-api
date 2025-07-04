@@ -44,15 +44,23 @@ class BookSeeder extends Seeder
         // Limit to 100 titles (or less if total is smaller)
         $uniqueTitles = array_slice($allTitles, 0, 100);
 
+        $bookCovers = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $bookCovers[] = "http://localhost:8000/book_covers/book_cover_{$i}.jpg"; // adjust filenames if different
+        }
+
         // Create 100 books
         for ($i = 0; $i < count($uniqueTitles); $i++) {
             $title = $uniqueTitles[$i];
             $author = $authors[$i % count($authors)]; // Cycle through authors
 
+            $cover = $bookCovers[$i % count($bookCovers)];
+
             $book = Book::create([
                 'title' => $title,
                 'author' => $author,
                 'description' => $faker->paragraph(),
+                'book_cover' => $cover,
             ]);
 
             $randomGenres = $faker->randomElements($genreIds, rand(1, 3));
