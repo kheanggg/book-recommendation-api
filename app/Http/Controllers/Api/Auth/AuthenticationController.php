@@ -178,4 +178,15 @@ class AuthenticationController extends Controller
             ], 500);
         }
     }
+
+    // Handle user logout
+    public function logout(Request $request)
+    {
+        // Get the token used to authenticate the current request and revoke it
+        $request->user()->token()->revoke();
+
+        return response()->json([
+            'message' => 'Successfully logged out.'
+        ]);
+    }
 }
