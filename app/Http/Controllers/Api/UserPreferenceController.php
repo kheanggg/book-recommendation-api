@@ -25,10 +25,7 @@ class UserPreferenceController extends Controller
             // Step 2: Clear old genre scores
             DB::table('user_genre_scores')->where('user_id', $user->user_id)->delete();
 
-            // ✅ Step 3: Clear recent book visits
-            DB::table('user_activities')->where('user_id', $user->user_id)->delete();
-
-            // Step 4: Add new preferences and scores
+            // Step 3: Add new preferences and scores
             $prefs = [];
             $scores = [];
 
@@ -51,8 +48,9 @@ class UserPreferenceController extends Controller
             DB::table('user_genre_scores')->insert($scores);
         });
 
-        return response()->json(['message' => 'Preferences, scores, and visit history cleared and saved successfully']);
+        return response()->json(['message' => 'Preferences and scores saved successfully']);
     }
+
 
     public function index(Request $request)
     {
@@ -67,6 +65,77 @@ class UserPreferenceController extends Controller
             ->get();
 
         return response()->json($genres);
+    }
+
+    public function recordGenreInteraction(Request $request)
+    {
+        if (!$request->user()) {
+            return;
+        }
+        
+        $request->validate([
+            'genre_id' => 'required|exists:genres,genre_id',
+            'book_id' => 'required|exists:books,book_id',  // add book_id since you want to record book visits too
+        ]);
+
+        $user = $request->user();
+        $userId = $user->user_id;
+        $genreId = $request->genre_id;
+        $bookId = $request->book_id;
+
+        // Increment genre score or insert new with score = 1
+        $existing = DB::table('user_genre_scores')
+            ->where('user_id', $userId)
+            ->where('genre_id', $genreId)
+            ->first();
+
+        if ($existing) {
+            DB::table('user_genre_scores')
+                ->where('user_id', $userId)
+                ->where('genre_id', $genreId)
+                ->update([
+                    'score' => $existing->score + 1,
+                    'updated_at' => now(),
+                ]);
+        } else {
+            DB::table('user_genre_scores')->insert([
+                'user_id' => $userId,
+                'genre_id' => $genreId,
+                'score' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Record user activity: store book visit
+        // Delete oldest record if more than 5 visits for this user
+        $count = DB::table('user_activities')
+            ->where('user_id', $userId)
+            ->count();
+
+        if ($count >= 5) {
+            DB::table('user_activities')
+                ->where('user_id', $userId)
+                ->orderBy('created_at', 'asc')
+                ->limit(1)
+                ->delete();
+        }
+
+        // Optional: prevent duplicate entries for same book (delete old visit before insert)
+        DB::table('user_activities')
+            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
+            ->delete();
+
+        // Insert new visit record
+        DB::table('user_activities')->insert([
+            'user_id' => $userId,
+            'book_id' => $bookId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Genre interaction and book visit recorded']);
     }
 
 }
