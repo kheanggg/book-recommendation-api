@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthenticationController;
 use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\BookController;
+use App\Http\Controllers\Api\TranscriptionController;
+use App\Http\Controllers\Api\UserPreferenceController;
 
 Route::get('/test', function () {
     return response()->json(['message' => 'API is222 working!']);
@@ -21,6 +23,18 @@ Route::post('/email/verify', [EmailVerificationController::class, 'verifyCode'])
 
 // Book
 Route::get('/books', [BookController::class, 'index']);
+Route::middleware('auth:api')->get('/books/recommended', [BookController::class, 'booksByTopGenresAndRecentVisits']);
 Route::get('/books/{id}', [BookController::class, 'show']);
 
+
 Route::get('/genres', fn() => \App\Models\Genre::all());
+
+// Voice Search
+Route::post('/upload-audio', [TranscriptionController::class, 'uploadAudio']);
+Route::post('/start-transcription', [TranscriptionController::class, 'startTranscription']);
+Route::get('/get-transcription-result/{jobName}', [TranscriptionController::class, 'getTranscriptionResult']);
+
+// User Preference
+Route::middleware('auth:api')->post('/user-preferences', [UserPreferenceController::class, 'store']);
+Route::middleware('auth:api')->get('/user-preferences', [UserPreferenceController::class, 'index']);
+Route::middleware('auth:api')->post('/genre-interact', [UserPreferenceController::class, 'recordGenreInteraction']);

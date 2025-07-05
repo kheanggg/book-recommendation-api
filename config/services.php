@@ -28,6 +28,24 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'aws' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION'),
+        'bucket_upload' => env('AWS_BUCKET_UPLOAD'),
+        'bucket_output' => env('AWS_BUCKET_OUTPUT'),
+    ],
+
+    's3' => [
+        'driver' => 's3',
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION'),
+        'bucket' => env('AWS_BUCKET_UPLOAD'),
+        'url' => env('AWS_URL'),
+    ],
+
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
