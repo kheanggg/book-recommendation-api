@@ -63,7 +63,7 @@ class BookSeeder extends Seeder
                 'book_cover' => $cover,
             ]);
 
-            $randomGenres = $faker->randomElements($genreIds, rand(1, 3));
+            $randomGenres = $faker->randomElements($genreIds, rand(1, 2));
             $book->genres()->attach($randomGenres);
         }
     }
